@@ -51,30 +51,6 @@ def add():
             author=current_user._get_current_object())
         db.session.add(note)
         db.session.commit()
-        # adding each task list to the table
-        task_list = Task.parse_markdown(note.body)
-        task_ids = []
-        for task_item in task_list:
-            task = Task(
-                title=task_item[0],
-                note_id=note.id,
-                notebook_id=note.notebook_id,
-                author_id=current_user.id)
-            db.session.add(task)
-            db.session.commit()
-            task_ids.append(task.id)
-        # adding an id tag to the li element of each task list item
-        count = 0
-        body_html_list = note.body_html.split("\n")
-        for i, element in enumerate(body_html_list):
-            if '<li class="task-list-item">' in element:
-                new_element = Task.add_id_to_li_element(
-                    element, str(task_ids[count]))
-                count = count + 1
-                body_html_list[i] = new_element
-        note.body_html = "\n".join(body_html_list)
-        db.session.add(note)
-        db.session.commit()
 
         tags = []
         if not len(form.tags.data) == 0:
@@ -161,50 +137,6 @@ def edit(id):
                 print form.tags.data
                 print tags
         note.str_tags = (tags)
-        db.session.commit()
-
-        # task list
-        new_task_list_checked = Task.parse_markdown(note.body)
-        new_task_list = [item[0] for item in new_task_list_checked]
-
-        for item_checked in new_task_list_checked:
-            item = item_checked[0]
-            checked = item_checked[1]
-            if item not in old_task_list:
-                # need to add
-                task = Task(
-                    title=item,
-                    is_checked=checked,
-                    note_id=note.id)
-                db.session.add(task)
-                db.session.commit()
-            else:
-                # may require an update in the table
-                index = old_task_list.index(item)
-                old_item = old_task_list_objects[index]
-                if checked != old_item.is_checked:
-                    old_item.is_checked = not old_item.is_checked
-                    old_item.updated_date = datetime.now()
-                    if checked is True:
-                        old_item.checked_date = datetime.now()
-                    db.session.add(old_item)
-                    db.session.commit()
-
-
-
-        # adding the id tags to the html elements
-        task_objs = Task.query.filter_by(note_id = note.id).all()
-        task_ids = [item.id for item in task_objs]
-
-        body_html_list = note.body_html.split("\n")
-        for i, element in enumerate(body_html_list):
-            if '<li class="task-list-item">' in element:
-                task_id = Task.get_task_item_id(element, task_objs)
-                new_element = Task.add_id_to_li_element(element, str(task_id))
-                # count = count + 1
-                body_html_list[i] = new_element
-        note.body_html = "\n".join(body_html_list)
-        db.session.add(note)
         db.session.commit()
 
         flash('The note has been updated.')
